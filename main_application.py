@@ -8,6 +8,9 @@ from pandas.plotting import parallel_coordinates
 import matplotlib.pyplot as plt
 import os
 import base64
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
 
 with open('results/cars/FS1_results_cars_cols.json', 'r') as json_file:
     cars_dict = json.load(json_file)
@@ -30,20 +33,46 @@ with open('results/seeds/FS3_results_seeds_cols.json', 'r') as json_file:
 cars = pd.read_csv("data/cars/cars.csv", index_col=0)
 cars_target_class = 'origin'
 
+for column in cars.columns:
+    if column != cars_target_class:
+        cars[column] = scaler.fit_transform(cars[column].values.reshape(-1, 1))
+
 cars_year = pd.read_csv("data/cars_year/cars_year.csv", index_col=0)
 cars_year_target_class = 'model year'
+
+for column in cars_year.columns:
+    if column != cars_year_target_class:
+        cars_year[column] = scaler.fit_transform(cars_year[column].values.reshape(-1, 1))
 
 ecoli = pd.read_csv("data/ecoli/ecoli.csv", index_col=0)
 ecoli_target_class = 'class'
 
+ecoli.drop('Sequence Name', axis=1, inplace=True)
+
+for column in ecoli.columns:
+    if column != ecoli_target_class:
+        ecoli[column] = scaler.fit_transform(ecoli[column].values.reshape(-1, 1))
+
 glass = pd.read_csv("data/glass/glass.csv", index_col=0)
 glass_target_class = 'Type of glass'
+
+for column in glass.columns:
+    if column != glass_target_class:
+        glass[column] = scaler.fit_transform(glass[column].values.reshape(-1, 1))
 
 iris = pd.read_csv("data/iris/iris.csv", index_col=0)
 iris_target_class = 'class'
 
+for column in iris.columns:
+    if column != iris_target_class:
+        iris[column] = scaler.fit_transform(iris[column].values.reshape(-1, 1))
+
 seeds = pd.read_csv("data/seeds/seeds.csv", index_col=0)
 seeds_target_class = 'class'
+
+for column in seeds.columns:
+    if column != seeds_target_class:
+        seeds[column] = scaler.fit_transform(seeds[column].values.reshape(-1, 1))
 
 tds_values_list = [item['tds'] for item in seeds_dict.values()]
 tds_values_list = sorted(list(set(tds_values_list)))
@@ -142,8 +171,6 @@ def update_output(dropdown, slider_value):
 
     ordering = unique_columns
 
-    print(triggered_id, dropdown, slider_value, ordering)
-
     # List to store Graph components
     pictures = []
 
@@ -152,8 +179,9 @@ def update_output(dropdown, slider_value):
         df_subset = df[df[target] == _class]
         df_subset = df_subset[ordering]
 
-        fig = plt.figure(figsize=(10, 5))
+        fig = plt.figure(figsize=(5, 3))
         parallel_coordinates(df_subset, class_column=target)
+        plt.xticks(rotation=90)
         random_string = ''.join(random.choice(string.ascii_letters) for _ in range(10))
         file_name = f'plots/{random_string}.png'
 
@@ -163,13 +191,19 @@ def update_output(dropdown, slider_value):
         plt.close()
 
     # Create Div components for each graph
-    graph_divs = [
-        html.Div(children=[
-            html.H4(f'Cluster {target} = {_class}'),
-            html.Img(src=f"data:image/png;base64,{base64.b64encode(open(pict, 'rb').read()).decode()}")
-        ], style={'textAlign': 'center'})
-        for _class, pict in zip(df[target].unique().tolist(), pictures)
-    ]
+    graph_divs = []
+
+    # Loop through images and organize them in rows of three
+    for i in range(0, len(pictures), 3):
+        row_images = pictures[i:i + 3]
+        row_div = html.Div([
+            html.Div(children=[
+                html.H4(f'Cluster {target} = {_class}'),
+                html.Img(src=f"data:image/png;base64,{base64.b64encode(open(pict, 'rb').read()).decode()}")
+            ], style={'textAlign': 'center'})
+            for _class, pict in zip(df[target].unique().tolist(), row_images)
+        ], style={'display': 'flex', 'justifyContent': 'space-around'})
+        graph_divs.append(row_div)
 
     div_return = html.Div(children=graph_divs)
 
