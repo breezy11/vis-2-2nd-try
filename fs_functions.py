@@ -36,7 +36,7 @@ def FS1(df, group_label, group_label_values):
 	# We take only numerical columns and delete the others.
 	colu = []
 	for c in df.columns:
-		if (isfloat(df[c][0]) and c != group_label):
+		if (isfloat(df[c].iloc[0]) and c != group_label):
 			colu.append(c)
 
 	df_temp = df[colu]
@@ -156,7 +156,8 @@ def FS2(df, group_label, group_label_values):
 			dij = abs(row - col)
 			W[row][col] = 1 - (dij / (D - 1))
 
-	no_dimensions = final_dict[1].shape[1]  # number of columns in a matrix which is number of dimensions
+	first_key = next(iter(final_dict.keys()))
+	no_dimensions = final_dict[first_key].shape[1]  # number of columns in a matrix which is number of dimensions
 	weights = []
 
 	for key1, key2 in itertools.combinations(final_dict.keys(), 2):
@@ -208,7 +209,7 @@ def FS3(df, group_label, group_label_values):
 	# We take only numerical columns and delete the others.
 	colu = []
 	for c in df.columns:
-		if (isfloat(df[c][0]) and c != group_label):
+		if (isfloat(df[c].iloc[0]) and c != group_label):
 			colu.append(c)
 
 	df_temp = df[colu]
@@ -255,7 +256,8 @@ def FS3(df, group_label, group_label_values):
 			dij = abs(row - col)
 			W[row][col] = 1 - (dij / (D - 1))
 
-	no_dimensions = final_dict[1].shape[1]  # number of columns in a matrix which is number of dimensions
+	first_key = next(iter(final_dict.keys()))
+	no_dimensions = final_dict[first_key].shape[1]  # number of columns in a matrix which is number of dimensions
 	weights = []
 
 	for key1, key2 in itertools.combinations(final_dict.keys(), 2):
