@@ -8,73 +8,27 @@ from pandas.plotting import parallel_coordinates
 import matplotlib.pyplot as plt
 import os
 import base64
-from sklearn.preprocessing import MinMaxScaler
 
-scaler = MinMaxScaler()
+dataset_names = ['cars', 'cars_year', 'iris', 'seeds', 'glass', 'ecoli']
 
-with open('results/cars/FS1_results_cars_cols.json', 'r') as json_file:
-    cars_dict = json.load(json_file)
+dataset_dicts = {}
+datasets = {}
+targets_dict = {'cars': 'origin',
+                'cars_year': 'model year',
+                'ecoli': 'class',
+                'glass': 'Type of glass',
+                'iris': 'class',
+                'seeds': 'class' }
 
-with open('results/cars_year/FS1_results_cars_year_cols.json', 'r') as json_file:
-    cars_year_dict = json.load(json_file)
+for dataset_name in dataset_names:
+    datasets[dataset_name] = pd.read_csv(f'data/{dataset_name}/{dataset_name}.csv', index_col=0)
+    for fs in ['FS1', 'FS2', 'FS3']:
+        json_file_path = f'results/{dataset_name}/{fs}_results_{dataset_name}_cols.json'
+        with open(json_file_path, 'r') as json_file:
+            dataset_dict = json.load(json_file)
+            dataset_dicts[f'{dataset_name}_{fs}'] = dataset_dict
 
-with open('results/ecoli/FS2_results_ecoli_cols.json', 'r') as json_file:
-    ecoli_dict = json.load(json_file)
-
-with open('results/glass/FS2_results_glass_cols.json', 'r') as json_file:
-    glass_dict = json.load(json_file)
-
-with open('results/iris/FS3_results_iris_cols.json', 'r') as json_file:
-    iris_dict = json.load(json_file)
-
-with open('results/seeds/FS3_results_seeds_cols.json', 'r') as json_file:
-    seeds_dict = json.load(json_file)
-
-cars = pd.read_csv("data/cars/cars.csv", index_col=0)
-cars_target_class = 'origin'
-
-for column in cars.columns:
-    if column != cars_target_class:
-        cars[column] = scaler.fit_transform(cars[column].values.reshape(-1, 1))
-
-cars_year = pd.read_csv("data/cars_year/cars_year.csv", index_col=0)
-cars_year_target_class = 'model year'
-
-for column in cars_year.columns:
-    if column != cars_year_target_class:
-        cars_year[column] = scaler.fit_transform(cars_year[column].values.reshape(-1, 1))
-
-ecoli = pd.read_csv("data/ecoli/ecoli.csv", index_col=0)
-ecoli_target_class = 'class'
-
-ecoli.drop('Sequence Name', axis=1, inplace=True)
-
-for column in ecoli.columns:
-    if column != ecoli_target_class:
-        ecoli[column] = scaler.fit_transform(ecoli[column].values.reshape(-1, 1))
-
-glass = pd.read_csv("data/glass/glass.csv", index_col=0)
-glass_target_class = 'Type of glass'
-
-for column in glass.columns:
-    if column != glass_target_class:
-        glass[column] = scaler.fit_transform(glass[column].values.reshape(-1, 1))
-
-iris = pd.read_csv("data/iris/iris.csv", index_col=0)
-iris_target_class = 'class'
-
-for column in iris.columns:
-    if column != iris_target_class:
-        iris[column] = scaler.fit_transform(iris[column].values.reshape(-1, 1))
-
-seeds = pd.read_csv("data/seeds/seeds.csv", index_col=0)
-seeds_target_class = 'class'
-
-for column in seeds.columns:
-    if column != seeds_target_class:
-        seeds[column] = scaler.fit_transform(seeds[column].values.reshape(-1, 1))
-
-tds_values_list = [item['tds'] for item in seeds_dict.values()]
+tds_values_list = [item['tds'] for item in dataset_dicts['cars_FS1'].values()]
 tds_values_list = sorted(list(set(tds_values_list)))
 
 # Initialize the Dash app
@@ -86,19 +40,38 @@ app.layout = html.Div([
         children='Reordering Sets of Parallel Coordinates Plots to Highlight Differences in Clusters',
         style={'textAlign': 'center'}
     ),
-    html.H4(children='Select the data set', style={'textAlign': 'center'}),
-    dcc.Dropdown(
-        id='my-dropdown',
-        options=[
-            {'label': 'Cars', 'value': 'Cars'},
-            {'label': 'Cars year', 'value': 'Cars year'},
-            {'label': 'Ecoli', 'value': 'Ecoli'},
-            {'label': 'Glass', 'value': 'Glass'},
-            {'label': 'Iris', 'value': 'Iris'},
-            {'label': 'Seeds', 'value': 'Seeds'}
-        ],
-        value='Cars'
-    ),
+    html.H3(children='Select the data set and the Feature Signature', style={'textAlign': 'center'}),
+    html.Div([
+        html.Div([
+            dcc.Dropdown(
+                id='my-dropdown',
+                options=[
+                    {'label': 'Cars', 'value': 'cars'},
+                    {'label': 'Cars year', 'value': 'cars_year'},
+                    {'label': 'Ecoli', 'value': 'ecoli'},
+                    {'label': 'Glass', 'value': 'glass'},
+                    {'label': 'Iris', 'value': 'iris'},
+                    {'label': 'Seeds', 'value': 'seeds'}
+                ],
+                value='cars',
+                style={'width': '100%'}
+            ),
+        ], style={'width': '48%', 'display': 'inline-block', 'textAlign': 'center'}),
+
+        html.Div([
+            dcc.RadioItems(
+                id='fs-radio',
+                options=[
+                    {'label': 'FS1', 'value': 'FS1'},
+                    {'label': 'FS2', 'value': 'FS2'},
+                    {'label': 'FS3', 'value': 'FS3'}
+                ],
+                value='FS1',
+                inline=True,
+                style={'width': '100%'}
+            ),
+        ], style={'width': '48%', 'display': 'inline-block', 'textAlign': 'center'})
+    ], style={'width': '100%', 'display': 'flex'}),
     html.H4(id='tds-header', children=[], style={'textAlign': 'center'}),
     dcc.Slider(
             id='my-slider',
@@ -113,13 +86,13 @@ app.layout = html.Div([
 
 @app.callback(
     [Output('return_div', 'children'), Output('tds-header', 'children'), Output('my-slider', 'max'), Output('my-slider', 'value')],
-    [Input('my-dropdown', 'value'), Input('my-slider', 'value')]
+    [Input('my-dropdown', 'value'), Input('my-slider', 'value'), Input('fs-radio', 'value')]
 )
-def update_output(dropdown, slider_value):
+def update_output(dropdown, slider_value, fs_chosen):
 
     triggered_id = callback_context.triggered_id
 
-    if triggered_id is None or triggered_id == 'my-dropdown':
+    if triggered_id is None or triggered_id == 'my-dropdown' or triggered_id == 'fs-radio':
         slider_value = 0
 
     # Delete all .png files in the /plots folder
@@ -127,30 +100,9 @@ def update_output(dropdown, slider_value):
         if file_name.endswith('.png'):
             os.remove(os.path.join('plots', file_name))
 
-    if dropdown == 'Cars':
-        df = cars
-        target = cars_target_class
-        tds_list = cars_dict
-    elif dropdown == 'Cars year':
-        df = cars_year
-        target = cars_year_target_class
-        tds_list = cars_year_dict
-    elif dropdown == 'Ecoli':
-        df = ecoli
-        target = ecoli_target_class
-        tds_list = ecoli_dict
-    elif dropdown == 'Glass':
-        df = glass
-        target = glass_target_class
-        tds_list = glass_dict
-    elif dropdown == 'Iris':
-        df = iris
-        target = iris_target_class
-        tds_list = iris_dict
-    elif dropdown == 'Seeds':
-        df = seeds
-        target = seeds_target_class
-        tds_list = seeds_dict
+    df = datasets[dropdown]
+    target = targets_dict[dropdown]
+    tds_list = dataset_dicts[f'{dropdown}_{fs_chosen}']
 
     tds_values_list = [item['tds'] for item in tds_list.values()]
     tds_values_list = sorted(list(set(tds_values_list)))
@@ -179,9 +131,9 @@ def update_output(dropdown, slider_value):
         df_subset = df[df[target] == _class]
         df_subset = df_subset[ordering]
 
-        fig = plt.figure(figsize=(5, 3))
+        fig = plt.figure(figsize=(5, 7))
         parallel_coordinates(df_subset, class_column=target)
-        plt.xticks(rotation=90)
+        plt.xticks(rotation=45)
         random_string = ''.join(random.choice(string.ascii_letters) for _ in range(10))
         file_name = f'plots/{random_string}.png'
 
